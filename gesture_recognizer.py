@@ -48,11 +48,17 @@ class BoundingBox(object):
 class Recognizer(QtGui.QMainWindow):
 
     # press mouse button and start drawing, when mouse button released start training/recognizing
+    # problem with mouse press and release - click on button also in the mix
+    # instead: drawing with mouse through press and release and then button to add gesture.
 
     SIZE = 50  # not sure size yet
 
     def __init__(self):
         super(Recognizer, self).__init__()
+        self.gestures = ['1', 'triangle', 'rectangle']
+        self._init_ui()
+
+    def _init_ui(self):
         self.setWindowTitle('Gesture Recognizer')
         self.setMinimumSize(1200, 700)
         central = QtGui.QWidget()
@@ -61,27 +67,53 @@ class Recognizer(QtGui.QMainWindow):
         central.setLayout(self.main_layout)
         # init different layouts
         self.menu_layout = QtGui.QVBoxLayout()
-        self.menu = QtGui.QGridLayout()
-        self.list = QtGui.QGridLayout()
+        self.mode_layout = QtGui.QGridLayout()
+        self.list_layout = QtGui.QGridLayout()
         self.canvas = QtGui.QVBoxLayout()
-        # inits menu layout
+        # inits menu layout - train mode
         self.train_button = QtGui.QPushButton('Training')
         self.train_button.clicked.connect(self.show_training)
         self.train_button.setDefault(True)
-        self.menu.addWidget(self.train_button, 0, 0, 1, 2)
-        self.recognize_button = QtGui.QPushButton('Recognize')
-        self.recognize_button.clicked.connect(self.show_recognition)
-        self.menu.addWidget(self.recognize_button, 0, 2, 1, 2)
+        self.mode_layout.addWidget(self.train_button, 0, 0, 1, 2)
         self.instructions = QtGui.QLabel()
         self.instructions.setText('Press the left mouse button and draw a number or shape on '
-                                  'the right side of the window.\nIf you release the mouse button the programm starts '
-                                  'training the system.\nYou can train the system with several shapes.')
-        self.menu.addWidget(self.instructions, 1, 0, 1, 4)
+                                  'the right side of the window.\nIf you press the "Add gesture" button the system '
+                                  'adds the gesture and starts training\nYou can train the system with several shapes.')
+        self.mode_layout.addWidget(self.instructions, 1, 0, 1, 4)
+        self.gesture_name = QtGui.QLineEdit()
+        self.mode_layout.addWidget(self.gesture_name, 6, 0, 1, 2)
+        self.add_button = QtGui.QPushButton('Add')
+        self.add_button.clicked.connect(self.add_gesture)
+        self.mode_layout.addWidget(self.add_button, 6, 3)
+        # inits menu layout - recognizer mode
+        self.recognize_button = QtGui.QPushButton('Recognize')
+        self.recognize_button.clicked.connect(self.show_recognition)
+        self.mode_layout.addWidget(self.recognize_button, 0, 2, 1, 2)
+        self.start_recognize_button = QtGui.QPushButton('Start recognizing')
+        self.start_recognize_button.clicked.connect(self.start_recognizing)
+        self.start_recognize_button.setVisible(False)
+        self.mode_layout.addWidget(self.start_recognize_button, 6, 0)
         # init list layout !!TODO
-
+        header = QtGui.QLabel('Gestures:')
+        self.list_layout.addWidget(header, 0, 0)
+        if len(self.gestures) != 0:
+            for i in range(len(self.gestures)):
+                self.list_layout.setRowMinimumHeight(i + 1, 50)
+                gesture = QtGui.QLabel(self.gestures[i])
+                self.list_layout.addWidget(gesture, i + 1, 0)
+                delete_button = QtGui.QPushButton('Delete')
+                delete_button.clicked.connect(lambda state, x=i: self.delete_gesture(self.gestures[x]))
+                self.list_layout.addWidget(delete_button, i + 1, 1)
+                retrain_button = QtGui.QPushButton('Retrain')
+                retrain_button.clicked.connect(lambda state, x=i: self.retrain_gesture(self.gestures[x]))
+                self.list_layout.addWidget(retrain_button, i + 1, 2)
+                # optional: add button?
+        else:
+            blank = QtGui.QLabel('No gestures recorded')
+            self.list_layout.addWidget(blank, 1, 1)
         # add diff layouts to right side
-        self.menu_layout.addLayout(self.menu)
-        self.menu_layout.addLayout(self.list)
+        self.menu_layout.addLayout(self.mode_layout)
+        self.menu_layout.addLayout(self.list_layout)
         # init canvas
         self.header = QtGui.QLabel('Draw here:')
         self.header.setAlignment(QtCore.Qt.AlignTop)
@@ -91,18 +123,36 @@ class Recognizer(QtGui.QMainWindow):
         self.main_layout.addLayout(self.canvas)
 
     def show_training(self):
+        self.gesture_name.setVisible(True)
+        self.add_button.setVisible(True)
+        self.start_recognize_button.setVisible(False)
         self.train_button.setDefault(True)
         self.recognize_button.setDefault(False)
         self.instructions.setText('Press the left mouse button and draw a number or shape on '
-                                  'the right side of the window.\nIf you release the mouse button the programm starts '
-                                  'training the system.\nYou can train the system with several shapes.')
+                                  'the right side of the window.\nIf you press the "Add gesture" button the system '
+                                  'adds the gesture and starts training\nYou can train the system with several shapes.')
 
     def show_recognition(self):
+        self.gesture_name.setVisible(False)
+        self.add_button.setVisible(False)
+        self.start_recognize_button.setVisible(True)
         self.recognize_button.setDefault(True)
         self.train_button.setDefault(False)
         self.instructions.setText('Press the left mouse button and draw a number or shape on '
-                                  'the right side of the window.\nIf you release the mouse button the programm starts '
+                                  'the right side of the window.\nIf you press "start recognizing" the programm starts '
                                   'the recognition.')
+
+    def start_recognizing(self):
+        print('start recognizing')
+
+    def add_gesture(self):
+        print('add gesture')
+
+    def delete_gesture(self, gesture):
+        print('delete gesture: ', gesture)
+
+    def retrain_gesture(self, gesture):
+        print('retrain gesture: ', gesture)
 
     def resample(self, points, n):
         I = self.path_length(points) / (n - 1)
