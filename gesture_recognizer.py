@@ -1,11 +1,10 @@
 import math
 import sys
 
-from PyQt5.QtCore import *  # QPoint
-from PyQt5.QtGui import *  # QPainter
-from PyQt5.QtWidgets import QFrame
-from pyqtgraph.Qt import QtGui, QtCore
-from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from pyqtgraph.Qt import QtGui
+from PyQt5 import QtCore
 
 # Authors: tg, ev
 # equal workload distribution
@@ -50,7 +49,7 @@ class BoundingBox(object):
 
 class Recognizer(QtGui.QMainWindow):
 
-    SIZE = 500  # not sure size yet; size of available space?
+    SIZE = 500
     N = 64  # as recommended in paper
 
     def __init__(self):
@@ -142,7 +141,6 @@ class Recognizer(QtGui.QMainWindow):
                 retrain_button = QtGui.QPushButton('Retrain')
                 retrain_button.clicked.connect(lambda state, x=i: self.retrain_gesture(self.gestures[x]))
                 self.list_layout.addWidget(retrain_button, i + 1, 2)
-                # optional: add button?
         else:
             blank = QtGui.QLabel('No gestures recorded')
             self.list_layout.addWidget(blank, 1, 1)
@@ -174,19 +172,15 @@ class Recognizer(QtGui.QMainWindow):
 
     # process drawing and get a recognition
     def start_recognizing(self):
-        print('start recognizing')
         if not self.current_points:
             return
-        interim_points = self.resample(self.current_points, self.N)
-        print('resam', len(interim_points))
-        interim_points = self.rotate_to_zero(interim_points)
-        print('zero', len(interim_points))
-        interim_points = self.scale_to_square(interim_points, self.SIZE)
-        print('square', len(interim_points))
-        interim_points = self.translate_to_origin(interim_points)
-        print('len', len(interim_points))
+        resampled_points = self.resample(self.current_points, self.N)
+        zero_points = self.rotate_to_zero(resampled_points)
+        square_points = self.scale_to_square(zero_points, self.SIZE)
+        interim_points = self.translate_to_origin(square_points)
         prediction = self.recognize(interim_points, self.templates)
-        self.recognize_text.setText(prediction[0])
+        output = prediction[0] + '  (' + str(round(prediction[1]*100, 2)) + '%)'
+        self.recognize_text.setText(output)
         # clear current points array
         self.current_points.clear()
         # delete drawing
@@ -195,7 +189,6 @@ class Recognizer(QtGui.QMainWindow):
 
     # add drawing to templates after processing
     def add_gesture(self):
-        print('add gesture: ', self.gesture_name.text())
         gesture_name = str(self.gesture_name.text())
         # add to ui
         if gesture_name == '':
@@ -206,14 +199,10 @@ class Recognizer(QtGui.QMainWindow):
         # start processing for template
         if not self.current_points:
             return
-        # print(self.current_points)
         resampled_points = self.resample(self.current_points, self.N)
-        print('interim', len(resampled_points))
         zero_points = self.rotate_to_zero(resampled_points)
-        print('zero', len(zero_points))
         square_points = self.scale_to_square(zero_points, self.SIZE)
         interim_points = self.translate_to_origin(square_points)
-        print('points', len(interim_points))
         # add to templates
         if gesture_name in self.templates:
             self.templates[gesture_name].append(interim_points)
@@ -227,7 +216,6 @@ class Recognizer(QtGui.QMainWindow):
 
     # delete gesture form ui and template
     def delete_gesture(self, gesture):
-        print('delete gesture: ', gesture)
         # remove gesture from ui
         self.gestures.remove(gesture)
         # https://stackoverflow.com/questions/4528347/clear-all-widgets-in-a-layout-in-pyqt
@@ -239,7 +227,6 @@ class Recognizer(QtGui.QMainWindow):
 
     # retrain certain gesture
     def retrain_gesture(self, gesture):
-        print('retrain gesture: ', gesture)
         # setup ui for retraining
         self.set_ui(True)
         self.gesture_name.setText(gesture)
@@ -250,7 +237,7 @@ class Recognizer(QtGui.QMainWindow):
         if gesture in self.templates:
             self.templates.pop(gesture, None)
 
-    # drawing on the right side of window (https://www.geeksforgeeks.org/pyqt5-create-paint-application/)
+    # drawing on the right side of window with the mouse
     def mousePressEvent(self, event):
         # if mouse inside of draw area
         in_canvas = False
@@ -258,67 +245,48 @@ class Recognizer(QtGui.QMainWindow):
             in_canvas = True
         # if left mouse button is pressed and in canvas
         if event.button() == Qt.LeftButton and in_canvas:
-            # make drawing flag true
             self.drawing = True
-            # make last point to the point of cursor
             self.last_point = event.pos()
 
     def mouseMoveEvent(self, event):
         # checking if left button is pressed and drawing flag is true
         if (event.buttons() & Qt.LeftButton) & self.drawing:
-            # creating painter object
             painter = QPainter(self.image)
-            # set the pen of the painter
             painter.setPen(QPen(Qt.black, 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-            # draw line from the last point of cursor to the current point
-            # this will draw only one step
             painter.drawLine(self.last_point, event.pos())
-            # change the last point
+            # change the last point and add it
             self.last_point = event.pos()
             self.current_points.append([self.last_point.x(), self.last_point.y()])
-            # update
             self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            # make drawing flag false
             self.drawing = False
 
     def paintEvent(self, event):
-        # create a canvas
         canvasPainter = QPainter(self)
-        # draw rectangle  on the canvas
         canvasPainter.drawImage(self.rect(), self.image, self.image.rect())
 
     # $1 recognizer functions
     # resample so drawing consists of n points
     def resample(self, points, n):
         increment = self.path_length(points) / (n - 1)
-        print('increment', increment)
-        d = 0.0
-        i = 0
-        k = 0
-        m = 0
+        d = 0
+        i = 1
         new_points = [points[0]]
-        for p in range(1, len(points) + 1):
-            print('i', i, 'k', k, 'm', m, 'd', d)
-            dist = math.dist(points[p-1], points[p])
+        while i < len(points):
+            dist = math.dist(points[i-1], points[i])
             if (d + dist) >= increment:
-                i += 1
-                k += 1
-                q_x = points[p-1][0] + ((increment - d) / dist) * (points[p][0] - points[p-1][0])
-                q_y = points[p-1][1] + ((increment - d) / dist) * (points[p][1] - points[p-1][1])
-                q = [q_x, q_y]
-                new_points.append(q)
-                # print(len(new_points))
-                points.insert(p, q)
-                d = 0.0
-                # print('points', points)
+                q_x = points[i-1][0] + ((increment - d) / dist) * (points[i][0] - points[i-1][0])
+                q_y = points[i-1][1] + ((increment - d) / dist) * (points[i][1] - points[i-1][1])
+                new_points.append([q_x, q_y])
+                points.insert(i, [q_x, q_y])
+                d = 0
             else:
-                i += 1
-                m += 1
                 d += dist
-        if len(new_points) == n - 1:  # Fix a possible roundoff error
+            i += 1
+        # http://depts.washington.edu/acelab/proj/dollar/dollar.js - for a possible rounding error
+        if len(new_points) == n - 1:
             new_points.append(points[0])
         return new_points
 
@@ -329,14 +297,9 @@ class Recognizer(QtGui.QMainWindow):
             d += math.dist(points[i-1], points[i])
         return d
 
-    def distance(self, p_1, p_2):
-        print(p_1, p_2)
-        dx = p_2[0] - p_1[0];
-        dy = p_2[1] - p_1[1];
-        return math.sqrt(dx * dx + dy * dy);
-
     # returns centroid of points
-    # https: // stackoverflow.com / questions / 4355894 / how - to - get - center - of - set - of - points - using - python / 4355934
+    # https: // stackoverflow.com / questions / 4355894 / how - to - get - center - of -
+    # set - of - points - using - python / 4355934
     def centroid(self, points):
         x = [p[0] for p in points]
         y = [p[1] for p in points]
@@ -345,7 +308,7 @@ class Recognizer(QtGui.QMainWindow):
 
     # rotate drawing to zero degrees
     def rotate_to_zero(self, points):
-        c = self.centroid(points)  #centroid = positions.mean(axis=0) (np.array)
+        c = self.centroid(points)
         theta = math.atan2(c[1] - points[0][1], c[0] - points[0][0])
         new_points = self.rotate_by(points, - theta)
         return new_points
@@ -363,9 +326,7 @@ class Recognizer(QtGui.QMainWindow):
     # scale drawing to square outline
     def scale_to_square(self, points, size):
         new_points = []
-        # ('poi', points)
         box = BoundingBox(points)
-        print('box', box)
         for p in points:
             q_x = p[0] * (size / box.width)
             q_y = p[1] * (size / box.height)
@@ -384,34 +345,35 @@ class Recognizer(QtGui.QMainWindow):
 
     # compare drawing with templates and return most likely one
     def recognize(self, points, templates):
-        b = math.inf  # np.inf, float(inf)
+        b = math.inf
         theta = 45  # degrees
         theta_avg = 2  # degrees
-        print('templates', templates)
         for T in templates:
             print('T', T)
-            print('temp', templates[T])
+            # print('temp', templates[T][0])
             d = self.distance_at_best_angle(points, templates[T][0], - theta, theta, theta_avg)
+            print('d', d)
             if d < b:
                 b = d
+                print('b', b)
                 new_T = T
-        score = 1 - b / 0.5 * math.sqrt(self.SIZE ** 2 + self.SIZE ** 2)  # size of scale_to_square
+                print('new_t', new_T)
+        score = 1 - (b / (0.5 * math.sqrt(self.SIZE ** 2 + self.SIZE ** 2)))  # size of scale_to_square
         return new_T, score
 
     # return distance of drawing to template at best angle
     def distance_at_best_angle(self, points, template_points, theta_a, theta_b, theta_alpha):
-        print('tem_1', len(template_points))
         phi = 0.5 * (-1 + math.sqrt(5))
         x_1 = phi * theta_a + (1 - phi) * theta_b
         f_1 = self.distance_at_angle(points, template_points, x_1)
         x_2 = (1 - phi) * theta_a + phi * theta_b
         f_2 = self.distance_at_angle(points, template_points, x_2)
-        while theta_b - theta_a > theta_alpha:
+        while abs(theta_b - theta_a) > theta_alpha:
             if f_1 < f_2:
                 theta_b = x_2
                 x_2 = x_1
                 f_2 = f_1
-                x_1 = phi * theta_a + (1- phi) * theta_b
+                x_1 = phi * theta_a + (1 - phi) * theta_b
                 f_1 = self.distance_at_angle(points, template_points, x_1)
             else:
                 theta_a = x_1
@@ -423,8 +385,6 @@ class Recognizer(QtGui.QMainWindow):
 
     # returns distance at angle
     def distance_at_angle(self, points, template_points, theta):
-        print('tem_2', len(template_points))
-        print(len(points))
         new_points = self.rotate_by(points, theta)
         d = self.path_distance(new_points, template_points)
         return d
@@ -432,8 +392,6 @@ class Recognizer(QtGui.QMainWindow):
     # returns path distance of points
     def path_distance(self, rec_points, template_points):
         d = 0
-        print('A', len(rec_points))
-        print('B', len(template_points))
         for i in range(len(rec_points)):
             d = d + math.dist(rec_points[i], template_points[i])
         return d / len(rec_points)
