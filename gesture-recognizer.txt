@@ -1,0 +1,15 @@
+9.2: Read up on Gesture Recognition
+What does the recognizer do?
+The so-called $-family comprises a set of recognizers for gesture interaction. They are used for gestures that are entered, for example, with a pen, finger or even mouse on mobile devices and computers. These gestures are compared with a library of template gestures and can thus be assigned to one of the templates. For example, a circle drawn by the user can actually be recognized as a circle by the computer.
+In the paper by Vatavu, Anthony, and Wobbrock (2012), a new method is presented: the $P recognizer treats the gesture input as a point cloud. The $P recognizer then compares this point cloud with the templates from the training data, which are also available as point clouds. The point clouds are resampled to consist of the same number of points. With the help of the minimum matching distance (see below) the best matching template is assigned, i.e. the gesture is assigned the best matching template from the training data - the gesture is recognized.
+
+Name an advantage of the $P recognizer over the $1 recognizer.
+While the $P works similarly to the $1 approach with unistrokes, it can also handle multistrokes. This is a great advantage because gestures can be drawn in different ways and not every user uses a single stroke for this purpose. An example of this is a simple triangle. While it can be drawn as a single line, even in this case the start and end points or even the drawing direction can vary. In addition, instead of one stroke, several strokes can be used, which can also vary. However, by viewing it as a timeless point cloud, as $P does, these differences can be neglected.
+
+What is the minimum matching distance?
+As described above, when a gesture is entered, it is treated as a point cloud. This point cloud is compared with each template from the training data to determine the best fitting template and assign the gesture to it. This comparison is done by first resampling the point clouds to have all point clouds with the same number of points n available. 
+Then, all n points of the gesture point cloud are each assigned to one of the n points of the respective template and the distance between these points is determined. The goal is to find the template for which the sum of the Euclidean distances of all these pairs is the smallest - the template with the minimum matching distance is finally assigned to the gesture.
+However, since for each such mapping of n points from the gesture point cloud to n points from one of the templates there are n! possibilities. We first have to find the best mapping in which the distances are minimal. For this the $P recognizer uses the Hungarian algorithm. 
+
+Literature: 
+Vatavu, R. D., Anthony, L., & Wobbrock, J. O. (2012, October). Gestures as point clouds: a $ P recognizer for user interface prototypes. In Proceedings of the 14th ACM international conference on Multimodal interaction (pp. 273-280).
