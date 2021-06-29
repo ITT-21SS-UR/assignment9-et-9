@@ -9,8 +9,9 @@ from PyQt5 import QtCore
 # Authors: tg, ev
 # equal workload distribution
 
-# for drawing we oriented us at this link: https://www.geeksforgeeks.org/pyqt5-create-paint-application/
+# gestures we can recommend: circle, star and '}'
 
+# for drawing we oriented us at this link: https://www.geeksforgeeks.org/pyqt5-create-paint-application/
 
 # https://techoverflow.net/2017/02/23/computing-bounding-box-for-a-list-of-coordinates-in-python/
 class BoundingBox(object):
@@ -160,8 +161,8 @@ class Recognizer(QtGui.QMainWindow):
         self.set_ui(True)
         self.instructions.setText('Press the left mouse button and draw a number or shape on '
                                   'the right side of the window.\nIf you press the "Add gesture" button the system '
-                                  'adds the gesture to the templates.\nYou can add several templates to the system. '
-                                  'Draw in one continuous line.')
+                                  'adds the gesture to the templates.\nYou can add several templates to the system but '
+                                  'add each gesture just once. Draw in one continuous line.')
 
     # show recognition instructions and ui
     def show_recognition(self):
@@ -207,7 +208,7 @@ class Recognizer(QtGui.QMainWindow):
         if gesture_name in self.templates:
             self.templates[gesture_name].append(interim_points)
         else:
-            self.templates[gesture_name] = [interim_points]
+            self.templates[gesture_name] = interim_points
         # clear current points array
         self.current_points.clear()
         # delete drawing
@@ -232,7 +233,8 @@ class Recognizer(QtGui.QMainWindow):
         self.gesture_name.setText(gesture)
         self.instructions.setText('Press the left mouse button and draw a number or shape on '
                                   'the right side of the window.\nIf you press the "Add gesture" button the system '
-                                  'adds the gesture and starts training\nYou can train the system with several shapes.')
+                                  'adds the gesture to the templates and retrains it.\nYou can add several templates '
+                                  'to the system but add each gesture just once. Draw in one continuous line.')
         # remove already existing data
         if gesture in self.templates:
             self.templates.pop(gesture, None)
@@ -349,15 +351,10 @@ class Recognizer(QtGui.QMainWindow):
         theta = 45  # degrees
         theta_avg = 2  # degrees
         for T in templates:
-            print('T', T)
-            # print('temp', templates[T][0])
-            d = self.distance_at_best_angle(points, templates[T][0], - theta, theta, theta_avg)
-            print('d', d)
+            d = self.distance_at_best_angle(points, templates[T], - theta, theta, theta_avg)
             if d < b:
                 b = d
-                print('b', b)
                 new_T = T
-                print('new_t', new_T)
         score = 1 - (b / (0.5 * math.sqrt(self.SIZE ** 2 + self.SIZE ** 2)))  # size of scale_to_square
         return new_T, score
 
