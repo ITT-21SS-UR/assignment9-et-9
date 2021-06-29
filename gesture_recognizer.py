@@ -13,6 +13,7 @@ from PyQt5 import QtCore
 
 # for drawing we oriented us at this link: https://www.geeksforgeeks.org/pyqt5-create-paint-application/
 
+
 # https://techoverflow.net/2017/02/23/computing-bounding-box-for-a-list-of-coordinates-in-python/
 class BoundingBox(object):
     """
